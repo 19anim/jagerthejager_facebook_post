@@ -490,14 +490,13 @@ async function savePostArtifacts(state) {
 async function nodePublishPost(state) {
   console.log(`[${state.timeSlot}] Publishing to Facebook...`);
 
-  // Step 1: Upload photo and get photo ID
-  async function uploadPhoto(pageId, token, imagePath, caption, maxTries = 3) {
+  // Step 1: Upload photo as unpublished media so it can be attached to a feed post.
+  async function uploadPhoto(pageId, token, imagePath, maxTries = 3) {
     for (let i = 0; i < maxTries; i++) {
       try {
         const form = new FormData();
         form.append("source", fs.createReadStream(imagePath));
-        form.append("caption", caption);
-        form.append("published", "true");
+        form.append("published", "false");
         form.append("access_token", token);
 
         console.log(
@@ -534,11 +533,9 @@ async function nodePublishPost(state) {
   async function createPostWithPhoto(pageId, token, photoId, caption, maxTries = 3) {
     for (let i = 0; i < maxTries; i++) {
       try {
-        const attachedMedia = JSON.stringify([{ media_fbid: photoId }]);
-
         const form = new FormData();
         form.append("message", caption);
-        form.append("attached_media", attachedMedia);
+        form.append("attached_media[0]", JSON.stringify({ media_fbid: photoId }));
         form.append("access_token", token);
         form.append("published", "true");
 
@@ -570,17 +567,30 @@ async function nodePublishPost(state) {
   }
 
   async function tryPublishWithRetries(pageId, token, imagePath, caption, maxTries = 3) {
-    const uploadResult = await uploadPhoto(pageId, token, imagePath, caption, maxTries);
+    const uploadResult = await uploadPhoto(pageId, token, imagePath, maxTries);
     if (!uploadResult.success) {
       return uploadResult;
+    }
+
+    const postResult = await createPostWithPhoto(
+      pageId,
+      token,
+      uploadResult.photoId,
+      caption,
+      maxTries,
+    );
+
+    if (!postResult.success) {
+      return postResult;
     }
 
     return {
       success: true,
       data: {
         photo_id: uploadResult.photoId,
-        post_id: uploadResult.data?.post_id || uploadResult.photoId,
+        post_id: postResult.postId,
         ...uploadResult.data,
+        ...postResult.data,
       },
     };
   }
