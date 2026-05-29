@@ -481,37 +481,26 @@ async function savePostArtifacts(state) {
 async function nodePublishPost(state) {
   console.log(`[${state.timeSlot}] Publishing to Facebook...`);
 
-  async function tryCreateDraftWithRetries(pageId, token, imagePath, caption, maxTries = 3) {
+  async function tryPublishWithRetries(pageId, token, imagePath, caption, maxTries = 3) {
     for (let i = 0; i < maxTries; i++) {
       try {
         const form = new FormData();
         form.append("source", fs.createReadStream(imagePath));
+        form.append("message", caption);
         form.append("access_token", token);
-        form.append("published", "false");
+        form.append("published", "true");
 
-        const photoResponse = await axios.post(
-          `https://graph.facebook.com/v25.0/${pageId}/photos`,
-          form,
-          {
-            headers: { ...form.getHeaders() },
-            timeout: 60000,
-            maxBodyLength: Infinity,
-            maxContentLength: Infinity,
-          },
-        );
-
-        const photoId = photoResponse.data?.id;
-        if (!photoId) throw new Error("No photo ID returned");
-
-        const feedResponse = await axios.post(`https://graph.facebook.com/v25.0/${pageId}/feed`, {
-          message: caption,
-          access_token: token,
-          published: false,
-          unpublished_content_type: "DRAFT",
-          attached_media: [{ media_fbid: photoId }],
+        const photoResponse = await axios.post(`https://graph.facebook.com/v25.0/${pageId}/photos`, form, {
+          headers: { ...form.getHeaders() },
+          timeout: 60000,
+          maxBodyLength: Infinity,
+          maxContentLength: Infinity,
         });
 
-        return { success: true, data: feedResponse.data };
+        const postId = photoResponse.data?.post_id || photoResponse.data?.id;
+        if (!postId) throw new Error("No post ID returned");
+
+        return { success: true, data: photoResponse.data };
       } catch (err) {
         console.warn(`[${state.timeSlot}] ⚠ Retry ${i + 1}/${maxTries} failed: ${err.message}`);
         if (i < maxTries - 1) await new Promise((r) => setTimeout(r, 1500));
@@ -521,14 +510,14 @@ async function nodePublishPost(state) {
   }
 
   const results = await Promise.all([
-    tryCreateDraftWithRetries(
+    tryPublishWithRetries(
       process.env.FB_PAGE_1_ID,
       process.env.FB_PAGE_1_TOKEN,
       state.processedImagePath,
       (state.caption || "") + FOOTER_PAGE_1,
       3,
     ),
-    tryCreateDraftWithRetries(
+    tryPublishWithRetries(
       process.env.FB_PAGE_2_ID,
       process.env.FB_PAGE_2_TOKEN,
       state.processedImagePath,
