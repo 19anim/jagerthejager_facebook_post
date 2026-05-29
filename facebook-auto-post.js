@@ -491,11 +491,12 @@ async function nodePublishPost(state) {
   console.log(`[${state.timeSlot}] Publishing to Facebook...`);
 
   // Step 1: Upload photo and get photo ID
-  async function uploadPhoto(pageId, token, imagePath, maxTries = 3) {
+  async function uploadPhoto(pageId, token, imagePath, caption, maxTries = 3) {
     for (let i = 0; i < maxTries; i++) {
       try {
         const form = new FormData();
         form.append("source", fs.createReadStream(imagePath));
+        form.append("caption", caption);
         form.append("published", "true");
         form.append("access_token", token);
 
@@ -569,32 +570,17 @@ async function nodePublishPost(state) {
   }
 
   async function tryPublishWithRetries(pageId, token, imagePath, caption, maxTries = 3) {
-    // Step 1: Upload photo first
-    const uploadResult = await uploadPhoto(pageId, token, imagePath, maxTries);
+    const uploadResult = await uploadPhoto(pageId, token, imagePath, caption, maxTries);
     if (!uploadResult.success) {
       return uploadResult;
-    }
-
-    // Step 2: Create post with the uploaded photo
-    const postResult = await createPostWithPhoto(
-      pageId,
-      token,
-      uploadResult.photoId,
-      caption,
-      maxTries,
-    );
-
-    if (!postResult.success) {
-      return postResult;
     }
 
     return {
       success: true,
       data: {
         photo_id: uploadResult.photoId,
-        post_id: postResult.postId,
+        post_id: uploadResult.data?.post_id || uploadResult.photoId,
         ...uploadResult.data,
-        ...postResult.data,
       },
     };
   }
