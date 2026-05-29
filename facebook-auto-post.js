@@ -8,14 +8,39 @@ import axios from "axios";
 import FormData from "form-data";
 import { createNotifier } from "./telegram-notifier.js";
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+function loadLocalEnv() {
+  const envPath = path.join(__dirname, ".env");
+  if (!fs.existsSync(envPath)) return;
+
+  const lines = fs.readFileSync(envPath, "utf8").split(/\r?\n/);
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+
+    const separatorIndex = trimmed.indexOf("=");
+    if (separatorIndex === -1) continue;
+
+    const key = trimmed.slice(0, separatorIndex).trim();
+    const rawValue = trimmed.slice(separatorIndex + 1).trim();
+    const value = rawValue.replace(/^['"]|['"]$/g, "");
+
+    if (key && process.env[key] === undefined) {
+      process.env[key] = value;
+    }
+  }
+}
+
+loadLocalEnv();
+
 // =========================================================================
 // KHỞI TẠO
 // =========================================================================
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const telegram = createNotifier();
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 const CAPTION_MODEL = "gpt-4o-mini";
 const IMAGE_MODEL = "gpt-image-2";
 const IMAGE_SIZE = "1536x1024";
@@ -204,7 +229,12 @@ async function nodeSelectImage(state) {
   console.log(`\n[${state.timeSlot}] Starting post generation workflow`);
   console.log(`[${state.timeSlot}] Selecting reference image...`);
 
-  const folderName = path.join(__dirname, state.timeSlot === "MORNING" ? "template" : "stocks");
+  const folderName = path.join(
+    __dirname,
+    state.timeSlot === "MORNING"
+      ? process.env.TEMPLATE_FOLDER || "template"
+      : process.env.STOCKS_FOLDER || "stocks",
+  );
 
   if (!fs.existsSync(folderName)) {
     fs.mkdirSync(folderName, { recursive: true });
@@ -426,7 +456,7 @@ async function savePostArtifacts(state) {
   const dateFolder = `${dd}_${mm}_${yyyy}`;
 
   const slot = state.timeSlot || "UNKNOWN";
-  const baseDir = path.join(__dirname, "posts", dateFolder, slot);
+  const baseDir = path.join(__dirname, process.env.POSTS_FOLDER || "posts", dateFolder, slot);
   if (!fs.existsSync(baseDir)) fs.mkdirSync(baseDir, { recursive: true });
 
   const srcImage = state.processedImagePath || state.generatedImagePath || state.imagePath;

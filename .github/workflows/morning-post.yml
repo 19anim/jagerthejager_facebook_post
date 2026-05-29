@@ -2,8 +2,8 @@ name: Jager Facebook Auto Post - MORNING
 
 on:
   schedule:
-    # Chạy lúc 8:00 AM (+07:00 Vietnam = 01:00 UTC)
-    - cron: '0 1 * * *'
+    # 08:00 Vietnam time = 01:00 UTC
+    - cron: "0 1 * * *"
   workflow_dispatch:
 
 jobs:
@@ -18,7 +18,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "20"
 
       - name: Install dependencies
         run: npm ci
