@@ -13,10 +13,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: "20"
 
@@ -26,8 +26,6 @@ jobs:
       - name: Run Noon Post
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           FB_PAGE_1_ID: ${{ secrets.FB_PAGE_1_ID }}
           FB_PAGE_1_TOKEN: ${{ secrets.FB_PAGE_1_TOKEN }}
           FB_PAGE_2_ID: ${{ secrets.FB_PAGE_2_ID }}

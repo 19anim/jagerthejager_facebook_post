@@ -26,8 +26,6 @@ jobs:
       - name: Run Morning Post
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           FB_PAGE_1_ID: ${{ secrets.FB_PAGE_1_ID }}
           FB_PAGE_1_TOKEN: ${{ secrets.FB_PAGE_1_TOKEN }}
           FB_PAGE_2_ID: ${{ secrets.FB_PAGE_2_ID }}
