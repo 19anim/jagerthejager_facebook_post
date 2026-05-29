@@ -1,0 +1,31 @@
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Node modules
+node_modules/
+
+# Generated files
+generated_*.png
+processed_*.jpg
+posts/
+watermark.png
+watermark.PNG
+
+# Logs
+*.log
+logs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test outputs
+test_output_*.png

@@ -1,0 +1,43 @@
+name: Jager Facebook Auto Post - MORNING
+
+on:
+  schedule:
+    # Chạy lúc 8:00 AM (+07:00 Vietnam = 01:00 UTC)
+    - cron: '0 1 * * *'
+  workflow_dispatch:
+
+jobs:
+  post-morning:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Morning Post
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          FB_PAGE_1_ID: ${{ secrets.FB_PAGE_1_ID }}
+          FB_PAGE_1_TOKEN: ${{ secrets.FB_PAGE_1_TOKEN }}
+          FB_PAGE_2_ID: ${{ secrets.FB_PAGE_2_ID }}
+          FB_PAGE_2_TOKEN: ${{ secrets.FB_PAGE_2_TOKEN }}
+        run: node facebook-auto-post.js MORNING
+
+      - name: Upload posts to artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: posts-morning-${{ github.run_number }}
+          path: posts/
+          retention-days: 7
