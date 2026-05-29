@@ -43,8 +43,21 @@ const IMAGE_MODEL = "gpt-image-2";
 const IMAGE_SIZE = "1536x1024";
 const IMAGE_QUALITY = "medium";
 
-const FOOTER_PAGE_1 = "\n\n--- \n🥃 Ghé Page 1 để săn Jager giá tốt nhé anh em!";
-const FOOTER_PAGE_2 = "\n\n--- \n🔥 Page 2 luôn sẵn hàng Jagermeister chính hãng!";
+const FOOTER_PAGE_1 = `\n\n--- 
+Sđt - 0927183879 - Ân
+https://jagerthejagershop.netlify.app
+IG: jagerthejager
+Tiktok: odayiembanthuochoconhuou
+Page facebook chính : https://www.facebook.com/odayiembanthuochoconhuou
+Facebook: https://www.facebook.com/19.anim`;
+
+const FOOTER_PAGE_2 = `\n\n--- 
+Sđt - 0927183879 - Ân
+https://jagerthejagershop.netlify.app
+IG: jagerthejager
+Tiktok: odayiembanthuochoconhuou
+Page facebook phụ: https://www.facebook.com/jagerthejagerxop
+Facebook: https://www.facebook.com/19.anim`;
 
 // =========================================================================
 // ĐỊNH NGHĨA STATE
