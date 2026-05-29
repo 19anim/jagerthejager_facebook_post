@@ -6,8 +6,6 @@ import path from "path";
 import { fileURLToPath } from "url";
 import axios from "axios";
 import FormData from "form-data";
-import { createNotifier } from "./telegram-notifier.js";
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -39,7 +37,6 @@ loadLocalEnv();
 // KHỞI TẠO
 // =========================================================================
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-const telegram = createNotifier();
 
 const CAPTION_MODEL = "gpt-4o-mini";
 const IMAGE_MODEL = "gpt-image-2";
@@ -366,7 +363,6 @@ async function nodeGenerateImage(state) {
     };
   } catch (error) {
     console.error(`[${state.timeSlot}] ✗ Image generation failed: ${error.message}`);
-    await telegram.notifyStepFailure("Image Generation", state.timeSlot, error.message);
     throw error;
   }
 }
@@ -490,12 +486,16 @@ async function nodePublishPost(state) {
         form.append("access_token", token);
         form.append("published", "true");
 
-        const photoResponse = await axios.post(`https://graph.facebook.com/v25.0/${pageId}/photos`, form, {
-          headers: { ...form.getHeaders() },
-          timeout: 60000,
-          maxBodyLength: Infinity,
-          maxContentLength: Infinity,
-        });
+        const photoResponse = await axios.post(
+          `https://graph.facebook.com/v25.0/${pageId}/photos`,
+          form,
+          {
+            headers: { ...form.getHeaders() },
+            timeout: 60000,
+            maxBodyLength: Infinity,
+            maxContentLength: Infinity,
+          },
+        );
 
         const postId = photoResponse.data?.post_id || photoResponse.data?.id;
         if (!postId) throw new Error("No post ID returned");
@@ -549,13 +549,10 @@ async function nodePublishPost(state) {
   if (allSuccess) {
     console.log(`[${state.timeSlot}] ✓ All pages published!`);
     await savePostArtifacts(state);
-    await telegram.notifySuccess(state.timeSlot, state.productName);
   } else if (someFailed) {
     console.log(`[${state.timeSlot}] ⚠ Partial success`);
-    await telegram.notifyPartialSuccess(state.timeSlot, state.productName, pages);
   } else {
     console.log(`[${state.timeSlot}] ✗ All pages failed`);
-    await telegram.notifyFailure(state.timeSlot, state.productName, "Facebook API errors");
   }
 
   return {};
@@ -612,7 +609,6 @@ async function main() {
     console.log(`\n✅ ${timeSlot} slot completed successfully!\n`);
   } catch (error) {
     console.error(`\n❌ ${timeSlot} slot failed: ${error.message}\n`);
-    await telegram.notifyFailure(timeSlot, "Unknown", error.message);
     process.exit(1);
   }
 }
