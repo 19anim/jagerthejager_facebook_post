@@ -535,26 +535,23 @@ async function nodePublishPost(state) {
       try {
         const attachedMedia = JSON.stringify([{ media_fbid: photoId }]);
 
-        const params = new URLSearchParams();
-        params.append("message", caption);
-        params.append("attached_media", attachedMedia);
-        params.append("access_token", token);
-        params.append("published", "true");
+        const form = new FormData();
+        form.append("message", caption);
+        form.append("attached_media", attachedMedia);
+        form.append("access_token", token);
+        form.append("published", "true");
 
         console.log(
           `[${state.timeSlot}] Creating post with photo ID: ${photoId}... (attempt ${i + 1}/${maxTries})`,
         );
+        console.log(`[${state.timeSlot}] Caption: ${caption.substring(0, 80)}...`);
 
-        const response = await axios.post(
-          `https://graph.facebook.com/v25.0/${pageId}/feed`,
-          params.toString(),
-          {
-            headers: {
-              "Content-Type": "application/x-www-form-urlencoded",
-            },
-            timeout: 60000,
-          },
-        );
+        const response = await axios.post(`https://graph.facebook.com/v25.0/${pageId}/feed`, form, {
+          headers: { ...form.getHeaders() },
+          timeout: 60000,
+          maxBodyLength: Infinity,
+          maxContentLength: Infinity,
+        });
 
         const postId = response.data?.id;
         if (!postId) throw new Error("No post ID returned from feed creation");
