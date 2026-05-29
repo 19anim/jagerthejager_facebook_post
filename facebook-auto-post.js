@@ -490,36 +490,116 @@ async function savePostArtifacts(state) {
 async function nodePublishPost(state) {
   console.log(`[${state.timeSlot}] Publishing to Facebook...`);
 
-  async function tryPublishWithRetries(pageId, token, imagePath, caption, maxTries = 3) {
+  // Step 1: Upload photo and get photo ID
+  async function uploadPhoto(pageId, token, imagePath, maxTries = 3) {
     for (let i = 0; i < maxTries; i++) {
       try {
         const form = new FormData();
         form.append("source", fs.createReadStream(imagePath));
-        form.append("message", caption);
-        form.append("access_token", token);
         form.append("published", "true");
+        form.append("access_token", token);
 
-        const photoResponse = await axios.post(
+        console.log(
+          `[${state.timeSlot}] Uploading photo to page ${pageId}... (attempt ${i + 1}/${maxTries})`,
+        );
+
+        const response = await axios.post(
           `https://graph.facebook.com/v25.0/${pageId}/photos`,
           form,
           {
             headers: { ...form.getHeaders() },
-            timeout: 60000,
+            timeout: 120000,
             maxBodyLength: Infinity,
             maxContentLength: Infinity,
           },
         );
 
-        const postId = photoResponse.data?.post_id || photoResponse.data?.id;
-        if (!postId) throw new Error("No post ID returned");
+        const photoId = response.data?.id;
+        if (!photoId) throw new Error("No photo ID returned from upload");
 
-        return { success: true, data: photoResponse.data };
+        console.log(`[${state.timeSlot}] ✓ Photo uploaded successfully. Photo ID: ${photoId}`);
+        return { success: true, photoId, data: response.data };
       } catch (err) {
-        console.warn(`[${state.timeSlot}] ⚠ Retry ${i + 1}/${maxTries} failed: ${err.message}`);
-        if (i < maxTries - 1) await new Promise((r) => setTimeout(r, 1500));
+        console.warn(
+          `[${state.timeSlot}] ⚠ Photo upload retry ${i + 1}/${maxTries} failed: ${err.message}`,
+        );
+        if (i < maxTries - 1) await new Promise((r) => setTimeout(r, 2000));
       }
     }
-    return { success: false, error: new Error("Max retries exceeded") };
+    return { success: false, error: new Error("Max photo upload retries exceeded") };
+  }
+
+  // Step 2: Create post with the uploaded photo
+  async function createPostWithPhoto(pageId, token, photoId, caption, maxTries = 3) {
+    for (let i = 0; i < maxTries; i++) {
+      try {
+        const attachedMedia = JSON.stringify([{ media_fbid: photoId }]);
+
+        const params = new URLSearchParams();
+        params.append("message", caption);
+        params.append("attached_media", attachedMedia);
+        params.append("access_token", token);
+        params.append("published", "true");
+
+        console.log(
+          `[${state.timeSlot}] Creating post with photo ID: ${photoId}... (attempt ${i + 1}/${maxTries})`,
+        );
+
+        const response = await axios.post(
+          `https://graph.facebook.com/v25.0/${pageId}/feed`,
+          params.toString(),
+          {
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded",
+            },
+            timeout: 60000,
+          },
+        );
+
+        const postId = response.data?.id;
+        if (!postId) throw new Error("No post ID returned from feed creation");
+
+        console.log(`[${state.timeSlot}] ✓ Post created successfully. Post ID: ${postId}`);
+        return { success: true, postId, data: response.data };
+      } catch (err) {
+        console.warn(
+          `[${state.timeSlot}] ⚠ Post creation retry ${i + 1}/${maxTries} failed: ${err.message}`,
+        );
+        if (i < maxTries - 1) await new Promise((r) => setTimeout(r, 2000));
+      }
+    }
+    return { success: false, error: new Error("Max post creation retries exceeded") };
+  }
+
+  async function tryPublishWithRetries(pageId, token, imagePath, caption, maxTries = 3) {
+    // Step 1: Upload photo first
+    const uploadResult = await uploadPhoto(pageId, token, imagePath, maxTries);
+    if (!uploadResult.success) {
+      return uploadResult;
+    }
+
+    // Step 2: Create post with the uploaded photo
+    const postResult = await createPostWithPhoto(
+      pageId,
+      token,
+      uploadResult.photoId,
+      caption,
+      maxTries,
+    );
+
+    if (!postResult.success) {
+      return postResult;
+    }
+
+    return {
+      success: true,
+      data: {
+        photo_id: uploadResult.photoId,
+        post_id: postResult.postId,
+        ...uploadResult.data,
+        ...postResult.data,
+      },
+    };
   }
 
   const results = await Promise.all([
