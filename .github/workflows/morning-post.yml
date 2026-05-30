@@ -2,8 +2,8 @@ name: Jager Facebook Auto Post - MORNING
 
 on:
   schedule:
-    # 08:00 Vietnam time = 01:00 UTC
-    - cron: "0 1 * * *"
+    # 08:07 Vietnam time = 01:07 UTC. Avoid GitHub Actions load spikes at minute 00.
+    - cron: "7 1 * * *"
   workflow_dispatch:
 
 jobs:

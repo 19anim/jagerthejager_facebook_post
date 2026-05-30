@@ -566,6 +566,35 @@ async function nodePublishPost(state) {
     return { success: false, error: new Error("Max post creation retries exceeded") };
   }
 
+  async function inspectPublishedPost(token, postId) {
+    try {
+      const fields = [
+        "id",
+        "permalink_url",
+        "is_published",
+        "is_hidden",
+        "status_type",
+        "created_time",
+      ].join(",");
+      const response = await axios.get(`https://graph.facebook.com/v25.0/${postId}`, {
+        params: {
+          fields,
+          access_token: token,
+        },
+        timeout: 30000,
+      });
+      const post = response.data || {};
+      console.log(
+        `[${state.timeSlot}] Post visibility check: id=${post.id}, is_published=${post.is_published}, is_hidden=${post.is_hidden}, status_type=${post.status_type}`,
+      );
+      if (post.permalink_url) {
+        console.log(`[${state.timeSlot}] Post permalink: ${post.permalink_url}`);
+      }
+    } catch (err) {
+      console.warn(`[${state.timeSlot}] Could not inspect post visibility: ${err.message}`);
+    }
+  }
+
   async function tryPublishWithRetries(pageId, token, imagePath, caption, maxTries = 3) {
     const uploadResult = await uploadPhoto(pageId, token, imagePath, maxTries);
     if (!uploadResult.success) {
@@ -583,6 +612,8 @@ async function nodePublishPost(state) {
     if (!postResult.success) {
       return postResult;
     }
+
+    await inspectPublishedPost(token, postResult.postId);
 
     return {
       success: true,
