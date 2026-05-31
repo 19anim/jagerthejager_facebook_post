@@ -40,6 +40,15 @@ jobs:
           FB_PAGE_2_TOKEN: ${{ secrets.FB_PAGE_2_TOKEN }}
         run: node facebook-auto-post.js NOON
 
+      - name: Show image selection history
+        if: always()
+        run: |
+          if [ -f .cache/image-selection-history.json ]; then
+            cat .cache/image-selection-history.json
+          else
+            echo "No image selection history found."
+          fi
+
       - name: Upload posts to artifacts
         if: always()
         uses: actions/upload-artifact@v7
