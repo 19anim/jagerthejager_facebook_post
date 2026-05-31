@@ -6,6 +6,7 @@
   "scripts": {
     "post:morning": "node facebook-auto-post.js MORNING",
     "post:noon": "node facebook-auto-post.js NOON",
+    "test:images": "node scripts/test-image-selection.js",
     "start": "node facebook-auto-post.js MORNING"
   },
   "keywords": [

@@ -20,6 +20,14 @@ jobs:
         with:
           node-version: "20"
 
+      - name: Restore image selection history
+        uses: actions/cache@v4
+        with:
+          path: .cache/
+          key: image-selection-history-noon-${{ github.run_id }}
+          restore-keys: |
+            image-selection-history-noon-
+
       - name: Install dependencies
         run: npm ci
 

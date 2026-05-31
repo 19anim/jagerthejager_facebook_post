@@ -62,6 +62,21 @@ node --env-file=.env facebook-auto-post.js NOON
 
 Supported image formats: `.jpg`, `.jpeg`, `.png`.
 
+Selected reference images are recorded in `.cache/image-selection-history.json`.
+The selector avoids images used within the last 7 days when another image is available.
+If every image was used recently, it falls back to the least recently used image.
+Set `IMAGE_REUSE_WINDOW_DAYS` to customize the window. GitHub Actions restores this
+history between scheduled runs.
+
+Test the selector without calling OpenAI or Facebook APIs:
+
+```bash
+npm run test:images -- MORNING --runs=10 --reset
+npm run test:images -- NOON --runs=10 --reset
+```
+
+The test uses `.cache/image-selection-history.test.json`, separate from the real history.
+
 ## Security Notes
 
 - `.env`, generated images, post artifacts, logs, and `node_modules/` are ignored by git.

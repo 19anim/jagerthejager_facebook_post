@@ -6,6 +6,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import axios from "axios";
 import FormData from "form-data";
+import { selectReferenceImage } from "./image-selection-history.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -239,12 +240,11 @@ async function nodeSelectImage(state) {
   console.log(`\n[${state.timeSlot}] Starting post generation workflow`);
   console.log(`[${state.timeSlot}] Selecting reference image...`);
 
-  const folderName = path.join(
-    __dirname,
+  const folderType =
     state.timeSlot === "MORNING"
       ? process.env.TEMPLATE_FOLDER || "template"
-      : process.env.STOCKS_FOLDER || "stocks",
-  );
+      : process.env.STOCKS_FOLDER || "stocks";
+  const folderName = path.join(__dirname, folderType);
 
   if (!fs.existsSync(folderName)) {
     fs.mkdirSync(folderName, { recursive: true });
@@ -254,7 +254,7 @@ async function nodeSelectImage(state) {
   const files = fs.readdirSync(folderName).filter((file) => /\.(jpg|jpeg|png)$/i.test(file));
   if (files.length === 0) throw new Error(`No images found in ${folderName}`);
 
-  const randomFile = files[Math.floor(Math.random() * files.length)];
+  const randomFile = selectReferenceImage(files, folderType);
   const selectedPath = path.join(folderName, randomFile);
   const productName = path
     .basename(randomFile, path.extname(randomFile))

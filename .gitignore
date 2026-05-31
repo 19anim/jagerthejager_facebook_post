@@ -10,6 +10,7 @@ node_modules/
 generated_*.png
 processed_*.jpg
 posts/
+.cache/
 watermark.png
 watermark.PNG
 
