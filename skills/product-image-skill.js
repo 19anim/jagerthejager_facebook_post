@@ -136,9 +136,20 @@ PRODUCT PRESERVATION:
 - Keep the same product identity, object type, shape, packaging structure, proportions, main colors, and layout.
 - Do not turn the product into another item.
 - Do not redesign the product category.
-- Preserve readable visual identity where legally acceptable, but avoid exact trademark recreation if the image model would otherwise copy protected marks.
 - Preserve the source image orientation and aspect ratio; do not convert horizontal references into vertical layouts.
+- Preserve the product's shape, label layout, color blocking, deer/stag-style emblem, retro collector aesthetic, and packaging structure.
 ${productContext}
+
+MANDATORY BRANDING REPLACEMENT:
+- If any visible text says "Jägermeister", "Jagermeister", "Jager", "Jäger", "Mast-Jägermeister", or close spelling variations, replace that brand wording everywhere with the exact replacement brand name: "NimAnim".
+- Do NOT keep or recreate the original Jägermeister trademark text on the bottle, box, glass, mat, cap, accessories, background posters, or any visible surface.
+- Do NOT use close lookalike spellings such as Jaegermeister, Jagermeister, Jäger Master, Jager Master, Jager The Jager, or similar variants.
+- Render the replacement brand as "NimAnim" with this exact capitalization whenever the text is large enough to be readable.
+- If the label surface is very small, curved, distant, or partially hidden, prefer a clean short "NimAnim" wordmark rather than adding extra words.
+- Keep the same label position, label shape, deer/stag-style emblem placement, red/green/orange/black heritage color structure, bottle shape, cap shape, and retro collector feeling.
+- The "NimAnim" wordmark should feel like a premium fictional herbal-liquor label, naturally printed and integrated into the product.
+- Use "NimAnim" consistently across all visible labels/boxes/accessories in the generated image.
+- Avoid warped text, duplicated text, nonsense text, and accidental original brand text.
 
 IMPORTANT IMAGE PROBLEM TO FIX:
 The output must NOT look like a front-facing AI packshot. Avoid flat direct frontal view, perfect symmetry, generic luxury gradient backgrounds, floating objects, plastic CGI reflections, over-clean surfaces, and repeated dark studio backdrops.
