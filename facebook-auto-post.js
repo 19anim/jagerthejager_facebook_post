@@ -7,6 +7,8 @@ import { fileURLToPath } from "url";
 import axios from "axios";
 import FormData from "form-data";
 import { selectReferenceImage } from "./image-selection-history.js";
+import { captionSkill } from "./skills/caption-skill.js";
+import { productImageSkill } from "./skills/product-image-skill.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -39,7 +41,8 @@ loadLocalEnv();
 // =========================================================================
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-const CAPTION_MODEL = "gpt-4o-mini";
+const CAPTION_MODEL = process.env.CAPTION_MODEL || "gpt-4o-mini";
+const VISION_MODEL = process.env.VISION_MODEL || "gpt-4o-mini";
 const IMAGE_MODEL = "gpt-image-2";
 const IMAGE_SIZE = "1536x1024";
 const IMAGE_QUALITY = "medium";
@@ -67,6 +70,8 @@ const GraphState = Annotation.Root({
   timeSlot: Annotation(),
   imagePath: Annotation(),
   productName: Annotation(),
+  captionContext: Annotation(),
+  captionResearch: Annotation(),
   caption: Annotation(),
   captionApproved: Annotation(),
   generatedImageUrl: Annotation(),
@@ -75,162 +80,6 @@ const GraphState = Annotation.Root({
   qualityApproved: Annotation(),
   attempts: Annotation(),
 });
-
-function randomItem(arr) {
-  return arr[Math.floor(Math.random() * arr.length)];
-}
-
-const sceneThemes = [
-  "cinematic luxury bar atmosphere",
-  "premium minimalist studio",
-  "luxury dark editorial setup",
-  "modern industrial environment",
-  "high-end lifestyle atmosphere",
-  "warm premium interior",
-  "cinematic nightlife environment",
-  "exclusive collector display",
-  "luxury lounge atmosphere",
-  "premium commercial backdrop",
-  "high-end restaurant ambience",
-  "modern luxury apartment",
-];
-
-const cameras = [
-  "Sony A7R V",
-  "Canon EOS R5",
-  "Nikon Z8",
-  "Leica SL2",
-  "Fujifilm GFX 100S",
-  "Phase One XF IQ4",
-];
-
-const lenses = [
-  { focal: "24mm", aperture: "f/2.8" },
-  { focal: "35mm", aperture: "f/1.8" },
-  { focal: "50mm", aperture: "f/1.4" },
-  { focal: "85mm", aperture: "f/1.8" },
-  { focal: "105mm", aperture: "f/2" },
-  { focal: "135mm", aperture: "f/2.8" },
-];
-
-const compositions = [
-  "hero product composition with cinematic depth",
-  "premium close-up commercial framing",
-  "realistic editorial perspective",
-  "natural luxury advertising composition",
-  "dramatic low-angle product shot",
-  "symmetrical premium framing",
-  "soft lifestyle commercial perspective",
-  "high-end catalog photography composition",
-];
-
-const lightings = [
-  "soft cinematic rim lighting",
-  "premium studio soft lighting",
-  "natural window lighting",
-  "warm tungsten atmosphere",
-  "realistic ambient lighting",
-  "luxury commercial lighting setup",
-  "moody cinematic shadows",
-  "golden hour reflections",
-];
-
-const backgrounds = [
-  "luxury dark environment with believable depth and subtle bokeh",
-  "premium studio backdrop with realistic depth",
-  "cinematic lifestyle environment",
-  "modern industrial background",
-  "high-end luxury interior",
-  "minimal dark textured backdrop",
-  "premium editorial environment",
-  "soft atmospheric background blur",
-];
-
-const realismDetails = [
-  "ultra realistic material textures",
-  "authentic reflections",
-  "realistic imperfections",
-  "natural depth of field",
-  "realistic camera optics",
-  "true-to-life materials",
-  "non-AI appearance",
-  "no CGI look",
-  "sharp focus on product",
-  "premium optical realism",
-  "realistic shadow transitions",
-  "natural commercial rendering",
-];
-
-const colorGradings = [
-  "luxury cinematic tones",
-  "premium editorial color grading",
-  "realistic commercial color science",
-  "rich shadows with natural highlights",
-  "subtle realistic contrast",
-  "high-end advertising color treatment",
-  "magazine-quality color rendering",
-];
-
-function generateImagePrompt(extraScene = "", productName = "") {
-  const lens = randomItem(lenses);
-  const iso = randomItem(["100", "125", "160", "200", "320"]);
-  const shutter = randomItem(["1/125", "1/160", "1/200", "1/250", "1/320"]);
-  const productContext = productName
-    ? `Product name: ${productName}. Use the file name to reinforce the product's identity in the generated image.`
-    : "";
-
-  return `
-Ultra realistic commercial photography of the ORIGINAL product from the reference image, keep the exact same product identity, preserve the original product shape, preserve original packaging design, preserve original logo placement, preserve original colors and proportions, maintain all primary branding elements
-
-${productContext}
-Preserve the original image orientation and aspect ratio: do not turn a horizontal reference image into a vertical one.
-Generate a fresh premium background and lighting while keeping the product framing consistent with the source.
-
-Do NOT redesign the product,
-do NOT replace the object,
-do NOT generate a different item,
-do NOT alter the product category
-
-Luxury commercial photography aesthetic, highly photorealistic, visually persuasive for customers, premium editorial quality, natural optical rendering, realistic materials and reflections, non-AI appearance
-
-Scene Theme:
-${randomItem(sceneThemes)} ${extraScene}
-
-Shot on ${randomItem(cameras)}, using ${lens.focal} lens, ${lens.aperture}, ISO ${iso}, shutter speed ${shutter}
-
-Composition:
-${randomItem(compositions)}
-
-Lighting:
-${randomItem(lightings)}
-
-Background:
-${randomItem(backgrounds)}
-
-Branding Protection:
-Replace all visible "Jägermeister" branding with fictional premium liquor branding using random but realistic-looking text. Generate a new non-existent wordmark in a similar visual style and placement while preserving the bottle shape, label structure, deer emblem, and retro aesthetic. Do not use the original trademark or close spelling variations. The replacement text should appear naturally printed on the label and fully integrated into the packaging design.
-
-Rendering Details:
-${randomItem(realismDetails)},
-${randomItem(realismDetails)},
-${randomItem(realismDetails)},
-${randomItem(realismDetails)},
-${randomItem(realismDetails)}
-
-Color Grading:
-${randomItem(colorGradings)}
-
-Final Quality:
-8k photorealistic image,
-magazine-quality advertising photography,
-luxury branding visual,
-realistic commercial rendering,
-high-end product photography,
-premium cinematic realism
-`
-    .replace(/\n\s+\n/g, "\n\n")
-    .trim();
-}
 
 // =========================================================================
 // WORKFLOW NODES
@@ -256,17 +105,51 @@ async function nodeSelectImage(state) {
 
   const randomFile = selectReferenceImage(files, folderType);
   const selectedPath = path.join(folderName, randomFile);
+
+  // Filename is now only a fallback. Caption generation will mainly use image vision.
   const productName = path
     .basename(randomFile, path.extname(randomFile))
     .replace(/[-_]+/g, " ")
     .trim();
 
-  console.log(`[${state.timeSlot}] ✓ Selected: ${randomFile} (${productName})`);
+  console.log(`[${state.timeSlot}] ✓ Selected: ${randomFile} (fallback name: ${productName})`);
 
   return {
     imagePath: selectedPath,
     productName,
     attempts: 0,
+  };
+}
+
+async function nodeAnalyzeCaptionContext(state) {
+  console.log(`[${state.timeSlot}] Analyzing image for caption context...`);
+
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error("Missing OPENAI_API_KEY");
+  }
+
+  const captionContext = await captionSkill.analyzeImageContext({
+    openai,
+    imagePath: state.imagePath,
+    filenameProductName: state.productName || "",
+    timeSlot: state.timeSlot,
+    model: VISION_MODEL,
+  });
+
+  const captionResearch = await captionSkill.researchIfNeeded({
+    openai,
+    captionContext,
+    model: CAPTION_MODEL,
+  });
+
+  console.log(
+    `[${state.timeSlot}] ✓ Caption context: ${captionContext.mainProduct || state.productName || "product"}`,
+  );
+
+  return {
+    captionContext,
+    captionResearch,
+    productName: captionContext.mainProduct || state.productName,
   };
 }
 
@@ -277,22 +160,22 @@ async function nodeGenerateCaption(state) {
     throw new Error("Missing OPENAI_API_KEY");
   }
 
-  const productName = state.productName || "product";
-  const prompt = `Role: You are a Jagermeister fanpage admin.
-Expect: Write a natural, witty, 2-3 sentence caption about "${productName}". No AI-ish phrases.
-Write in Vietnamese, be conversational and persuasive. Use emojis if fitting.
-AVOID: 'khám phá', 'hành trình', 'tuyệt hảo', 'chiêu mộ', 'đông đảo'
-Just reply with the caption, no explanation.`;
+  const prompt = captionSkill.buildPrompt({
+    productName: state.productName || "",
+    timeSlot: state.timeSlot,
+    captionContext: state.captionContext || {},
+    webResearch: state.captionResearch || "",
+  });
 
   const message = await openai.chat.completions.create({
     model: CAPTION_MODEL,
     messages: [{ role: "user", content: prompt }],
-    temperature: 0.8,
-    max_tokens: 150,
+    temperature: 0.75,
+    max_tokens: 220,
   });
 
   const caption = message.choices[0].message.content.trim();
-  console.log(`[${state.timeSlot}] ✓ Caption: ${caption.substring(0, 60)}...`);
+  console.log(`[${state.timeSlot}] ✓ Caption: ${caption.substring(0, 90)}...`);
 
   return {
     caption,
@@ -303,17 +186,13 @@ Just reply with the caption, no explanation.`;
 async function nodeQualityCheckCaption(state) {
   console.log(`[${state.timeSlot}] Checking caption quality...`);
 
-  const caption = state.caption.toLowerCase();
-  const bannedKeywords = ["khám phá", "hành trình", "tuyệt hảo", "chiêu mộ", "đông đảo"];
-  const containsAIWord = bannedKeywords.some((word) => caption.includes(word));
-
-  if (!containsAIWord && state.caption.length <= 150) {
+  if (captionSkill.isGoodCaption(state.caption || "")) {
     console.log(`[${state.timeSlot}] ✓ Caption passed quality check`);
     return { captionApproved: true };
   }
 
-  if (state.attempts >= 2) {
-    console.log(`[${state.timeSlot}] ⚠ Caption accepted after 2 retries`);
+  if (state.attempts >= 3) {
+    console.log(`[${state.timeSlot}] ⚠ Caption accepted after 3 attempts`);
     return { captionApproved: true };
   }
 
@@ -328,7 +207,10 @@ async function nodeGenerateImage(state) {
     throw new Error("Missing OPENAI_API_KEY");
   }
 
-  const imagePrompt = generateImagePrompt("", state.productName);
+  const imagePrompt = productImageSkill.buildPrompt({
+    productName: state.productName || "",
+    extraScene: "",
+  });
 
   try {
     const referenceImage = await toFile(
@@ -689,6 +571,7 @@ function decideImage(state) {
 
 const workflow = new StateGraph(GraphState)
   .addNode("select_image", nodeSelectImage)
+  .addNode("analyze_caption_context", nodeAnalyzeCaptionContext)
   .addNode("generate_caption", nodeGenerateCaption)
   .addNode("quality_check_caption", nodeQualityCheckCaption)
   .addNode("generate_image", nodeGenerateImage)
@@ -697,7 +580,8 @@ const workflow = new StateGraph(GraphState)
   .addNode("publish", nodePublishPost)
 
   .addEdge("__start__", "select_image")
-  .addEdge("select_image", "generate_caption")
+  .addEdge("select_image", "analyze_caption_context")
+  .addEdge("analyze_caption_context", "generate_caption")
   .addEdge("generate_caption", "quality_check_caption")
   .addConditionalEdges("quality_check_caption", decideCaption, {
     generate_image: "generate_image",
